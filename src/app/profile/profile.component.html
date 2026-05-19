@@ -1,0 +1,91 @@
+<div class="profile-page">
+  <div class="profile-header">
+    <button class="back-btn" (click)="goBack()">← Back</button>
+    <h2>My Profile</h2>
+    <button class="theme-btn" (click)="themeService.toggleTheme()" title="Toggle theme">
+      {{ themeService.isDark ? '☀️' : '🌙' }}
+    </button>
+  </div>
+
+  <div class="profile-card">
+    <!-- Avatar -->
+    <div class="avatar-section">
+      <label class="avatar-upload-label" title="Change photo">
+        <app-avatar
+          [name]="currentUser.name"
+          [photoURL]="avatarPreview || currentUser.photoURL"
+          [size]="88"
+          [status]="'online'"
+          [showStatus]="true"
+        />
+        <div class="avatar-overlay">📷</div>
+        <input type="file" accept="image/*" hidden (change)="onAvatarChange($event)" />
+      </label>
+      <p class="avatar-hint">Tap to change photo</p>
+    </div>
+
+    @if (error) {
+      <div class="alert alert-error">⚠️ {{ error }}</div>
+    }
+    @if (success) {
+      <div class="alert alert-success">✅ {{ success }}</div>
+    }
+
+    <!-- Form -->
+    <form [formGroup]="form" (ngSubmit)="onSave()" class="profile-form">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input
+          type="text"
+          formControlName="name"
+          class="form-input"
+          [class.error]="form.get('name')?.invalid && form.get('name')?.touched"
+          placeholder="Your full name"
+        />
+        @if (form.get('name')?.invalid && form.get('name')?.touched) {
+          <span class="form-error">Name must be at least 2 characters</span>
+        }
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" [value]="currentUser.email" class="form-input" disabled />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Bio</label>
+        <input
+          type="text"
+          formControlName="bio"
+          class="form-input"
+          placeholder="Hey there! I'm using ZenBotChat"
+          maxlength="120"
+        />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input
+          type="tel"
+          formControlName="phone"
+          class="form-input"
+          placeholder="+1 234 567 8900"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-full" [disabled]="loading">
+        @if (loading) {
+          <span class="spinner"></span> Saving...
+        } @else {
+          Save Changes
+        }
+      </button>
+    </form>
+
+    <!-- Account section -->
+    <div class="account-section">
+      <h4>Account</h4>
+      <button class="danger-btn" (click)="logout()">🚪 Sign Out</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,16 @@
+<div class="chat-layout">
+  @if (showList) {
+    <div class="layout-sidebar" [class.mobile-full]="isMobile">
+      <app-chat-list (chatSelected)="onChatSelected($event)" />
+    </div>
+  }
+
+  @if (showWindow) {
+    <div class="layout-main" [class.mobile-full]="isMobile">
+      <app-chat-window
+        [chatPreview]="activeChatPreview"
+        (backToList)="onBackToList()"
+      />
+    </div>
+  }
+</div>

@@ -1,0 +1,258 @@
+<div class="chat-list-panel">
+
+  <!-- ── Header ── -->
+  <div class="panel-header">
+    <div class="header-top">
+      <div class="header-brand">
+        <span class="brand-icon">🤖</span>
+        <h2>ZenBotChat</h2>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" (click)="showSearch = !showSearch" title="Search">🔍</button>
+        <button class="icon-btn" (click)="themeService.toggleTheme()" title="Toggle theme">
+          {{ themeService.isDark ? '☀️' : '🌙' }}
+        </button>
+        <button class="icon-btn" [routerLink]="['/profile']" title="Profile">⚙️</button>
+        <button class="icon-btn" (click)="logout()" title="Logout">🚪</button>
+      </div>
+    </div>
+
+    @if (showSearch) {
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input [formControl]="searchControl" placeholder="Search chats or users..." class="search-input" autofocus />
+        @if (searchControl.value) {
+          <button class="clear-btn" (click)="searchControl.setValue('')">✕</button>
+        }
+      </div>
+    }
+
+    <div class="tab-bar">
+      <button class="tab-btn" [class.active]="activeTab === 'chats'" (click)="setTab('chats')">
+        💬 Chats
+        @if ((chatPreviews | chatFilter: false).length; as count) {
+          <span class="tab-count">{{ count }}</span>
+        }
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'groups'" (click)="setTab('groups')">
+        👥 Groups
+        @if ((chatPreviews | chatFilter: true).length; as count) {
+          <span class="tab-count">{{ count }}</span>
+        }
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Chat List Body ── -->
+  <div class="panel-body">
+    @if (loading) {
+      <app-skeleton [count]="6" />
+    } @else {
+
+      <!-- Sidebar search results -->
+      @if (searchControl.value && searchingUsers) {
+        <app-skeleton [count]="3" />
+      }
+      @if (searchControl.value && searchResults.length > 0) {
+        <div class="section-label">People</div>
+        @for (user of searchResults; track user.uid) {
+          <div class="chat-item" (click)="startChatWith(user)">
+            <app-avatar [name]="user.name" [photoURL]="user.photoURL" [size]="46" [status]="user.status" [showStatus]="true" />
+            <div class="chat-content">
+              <span class="chat-name">{{ user.name }}</span>
+              <span class="chat-preview">{{ user.email }}</span>
+            </div>
+            <span class="new-chat-badge">New Chat</span>
+          </div>
+        }
+        <div class="section-label">Chats</div>
+      }
+
+      <!-- Existing Chats / Empty state -->
+      @if (filteredPreviews.length === 0 && !searchControl.value) {
+        <div class="empty-state">
+          <div class="empty-icon">{{ activeTab === 'groups' ? '👥' : '💬' }}</div>
+          <p>{{ activeTab === 'groups' ? 'No groups yet' : 'No conversations yet' }}</p>
+          <button class="btn-start"
+            (click)="activeTab === 'groups' ? openGroupModal() : (showNewChatModal = true)">
+            {{ activeTab === 'groups' ? '+ Create Group' : '+ Start Chat' }}
+          </button>
+        </div>
+      } @else {
+        @for (chat of filteredPreviews; track chat.chatId) {
+          <div class="chat-item" [class.pinned]="chat.isPinned" [class.muted]="chat.isMuted"
+               (click)="openChat(chat)">
+            <div class="chat-avatar-wrap">
+              <app-avatar [name]="chat.name" [photoURL]="chat.photoURL" [size]="46"
+                          [status]="chat.status || 'offline'" [showStatus]="!chat.isGroup" />
+              @if (chat.isGroup) { <span class="group-badge">👥</span> }
+            </div>
+            <div class="chat-content">
+              <div class="chat-top">
+                <span class="chat-name">
+                  @if (chat.isPinned) { 📌 }
+                  {{ chat.name }}
+                  @if (chat.isMuted) { 🔕 }
+                </span>
+                <span class="chat-time">{{ formatTime(chat.lastMessageTime) }}</span>
+              </div>
+              <div class="chat-bottom">
+                <span class="chat-preview">
+                  @if (chat.isTyping) {
+                    <em class="typing-preview">typing...</em>
+                  } @else {
+                    {{ chat.lastMessage || 'Start a conversation' }}
+                  }
+                </span>
+                @if (chat.unreadCount > 0 && !chat.isMuted) {
+                  <span class="unread-badge">{{ chat.unreadCount > 99 ? '99+' : chat.unreadCount }}</span>
+                }
+              </div>
+            </div>
+            <div class="chat-actions" (click)="$event.stopPropagation()">
+              <button class="action-dot" (click)="pinChat(chat.chatId, chat.isPinned, $event)"
+                      [title]="chat.isPinned ? 'Unpin' : 'Pin'">
+                {{ chat.isPinned ? '📍' : '📌' }}
+              </button>
+              <button class="action-dot" (click)="muteChat(chat.chatId, chat.isMuted, $event)"
+                      [title]="chat.isMuted ? 'Unmute' : 'Mute'">
+                {{ chat.isMuted ? '🔔' : '🔕' }}
+              </button>
+            </div>
+          </div>
+        }
+      }
+    }
+  </div>
+
+  <!-- ── FABs ── -->
+  <div class="fab-group">
+    <button class="fab fab-secondary" (click)="openGroupModal()" title="New Group">👥</button>
+    <button class="fab fab-primary" (click)="showNewChatModal = true" title="New Chat">✏️</button>
+  </div>
+
+  <!-- ── New Chat Modal ── -->
+  @if (showNewChatModal) {
+    <div class="modal-overlay" (click)="closeNewChatModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>New Chat</h3>
+          <button class="modal-close" (click)="closeNewChatModal()">✕</button>
+        </div>
+        <div class="modal-search">
+          <input [formControl]="newChatSearch" placeholder="Search by name or email..."
+                 class="form-input" autofocus />
+        </div>
+        <div class="modal-list">
+          @if (newChatSearching) {
+            <app-skeleton [count]="3" />
+          } @else if (newChatResults.length > 0) {
+            @for (user of newChatResults; track user.uid) {
+              <div class="modal-user-item" (click)="startChatWith(user)">
+                <app-avatar [name]="user.name" [photoURL]="user.photoURL" [size]="40"
+                            [status]="user.status" [showStatus]="true" />
+                <div>
+                  <div class="modal-user-name">{{ user.name }}</div>
+                  <div class="modal-user-email">{{ user.email }}</div>
+                </div>
+              </div>
+            }
+          } @else if (newChatSearch.value && newChatSearch.value.length >= 2) {
+            <p class="modal-empty">No users found for "{{ newChatSearch.value }}"</p>
+            <p class="modal-hint">Make sure the person has registered on ZenBotChat</p>
+          } @else {
+            <p class="modal-hint">Type a name or email to search</p>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── New Group Modal ── -->
+  @if (showGroupModal) {
+    <div class="modal-overlay" (click)="closeGroupModal()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>👥 New Group</h3>
+          <button class="modal-close" (click)="closeGroupModal()">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Group details -->
+          <input [(ngModel)]="groupName" placeholder="Group name *" class="form-input" />
+          <input [(ngModel)]="groupDesc" placeholder="Description (optional)" class="form-input mt-8" />
+
+          <!-- Member search — uses its own FormControl, no conflict -->
+          <div class="member-search-wrap">
+            <span class="member-search-label">Add Members</span>
+            <div class="search-bar-inline">
+              <span>🔍</span>
+              <input [formControl]="groupSearch" placeholder="Search by name or email..."
+                     class="group-search-input" autofocus />
+              @if (groupSearch.value) {
+                <button class="clear-btn-sm" (click)="groupSearch.setValue('')">✕</button>
+              }
+            </div>
+          </div>
+
+          <!-- Selected members chips -->
+          @if (selectedMembers.length > 0) {
+            <div class="selected-members">
+              @for (m of selectedMembers; track m.uid) {
+                <div class="selected-chip">
+                  <app-avatar [name]="m.name" [size]="22" />
+                  <span>{{ m.name }}</span>
+                  <button (click)="toggleMember(m)">✕</button>
+                </div>
+              }
+            </div>
+          }
+
+          <!-- Search feedback -->
+          @if (groupSearching) {
+            <app-skeleton [count]="2" />
+          } @else if (groupSearchError) {
+            <div class="search-feedback error">⚠️ {{ groupSearchError }}</div>
+          } @else if (groupSearch.value && groupSearch.value.length < 2) {
+            <p class="modal-hint">Type at least 2 characters to search</p>
+          } @else if (groupSearch.value && groupSearchResults.length === 0) {
+            <p class="modal-empty">No users found — make sure they've registered</p>
+          } @else if (!groupSearch.value) {
+            <p class="modal-hint">Search users above to add members</p>
+          }
+
+          <!-- Search results -->
+          @for (user of groupSearchResults; track user.uid) {
+            <div class="modal-user-item" [class.selected]="isMemberSelected(user.uid)"
+                 (click)="toggleMember(user)">
+              <app-avatar [name]="user.name" [photoURL]="user.photoURL" [size]="36"
+                          [status]="user.status" [showStatus]="true" />
+              <div>
+                <div class="modal-user-name">{{ user.name }}</div>
+                <div class="modal-user-email">{{ user.email }}</div>
+              </div>
+              <span class="member-check">{{ isMemberSelected(user.uid) ? '✓' : '+' }}</span>
+            </div>
+          }
+
+          <!-- Error -->
+          @if (groupError) {
+            <div class="search-feedback error">⚠️ {{ groupError }}</div>
+          }
+
+          <!-- Create button -->
+          <button class="btn-create-group"
+                  [disabled]="!groupName.trim() || selectedMembers.length === 0 || groupCreating"
+                  (click)="createGroup()">
+            @if (groupCreating) {
+              <span class="mini-spinner"></span> Creating...
+            } @else {
+              Create Group ({{ selectedMembers.length + 1 }} members)
+            }
+          </button>
+          <p class="group-note">You will be added as admin automatically</p>
+        </div>
+      </div>
+    </div>
+  }
+</div>

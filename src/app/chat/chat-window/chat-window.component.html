@@ -1,0 +1,306 @@
+<div class="chat-window" (click)="showReactionPicker = null">
+
+  <!-- ── Empty state ── -->
+  @if (!chatPreview) {
+    <div class="empty-state">
+      <div class="empty-icon">🤖</div>
+      <h2>Welcome to ZenBotChat</h2>
+      <p>Select a conversation to start chatting</p>
+      <div class="empty-features">
+        <span>💬 1-to-1 chat</span>
+        <span>👥 Group chat</span>
+        <span>🤖 AI assistant</span>
+        <span>🌙 Dark mode</span>
+      </div>
+    </div>
+  }
+
+  @if (chatPreview) {
+
+    <!-- ── Header ── -->
+    <div class="chat-header">
+      <button class="back-btn" (click)="backToList.emit()" title="Back">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/>
+        </svg>
+      </button>
+
+      <app-avatar
+        [name]="chatPreview.name"
+        [photoURL]="chatPreview.photoURL"
+        [size]="40"
+        [status]="chatPreview.status || 'offline'"
+        [showStatus]="!chatPreview.isGroup"
+      />
+
+      <div class="header-info">
+        <h3 class="header-name">{{ chatPreview.name }}</h3>
+        @if (isTyping) {
+          <span class="header-status typing">typing...</span>
+        } @else if (!chatPreview.isGroup) {
+          <app-status-indicator [status]="chatPreview.status || 'offline'" [showLabel]="true" />
+        } @else {
+          <span class="header-status">{{ chatPreview.memberCount || 0 }} members</span>
+        }
+      </div>
+
+      <div class="header-actions">
+        <button class="hdr-btn" (click)="toggleAiPanel()" [class.active]="showAiPanel" title="AI Assistant">
+          🤖
+        </button>
+        @if (chatPreview.isGroup) {
+          <button class="hdr-btn" (click)="toggleGroupInfo()" [class.active]="showGroupInfo" title="Group info">
+            ℹ️
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- ── Body ── -->
+    <div class="chat-body">
+
+      <!-- Messages area -->
+      <div class="messages-area" #messagesEl>
+        @if (messages.length === 0) {
+          <div class="no-messages">
+            <div>💬</div>
+            <p>No messages yet. Say hi!</p>
+          </div>
+        }
+
+        @for (msg of messages; track msg.id; let i = $index) {
+
+          <!-- Date separator -->
+          @if (i === 0 || !isSameDay(messages[i - 1], msg)) {
+            <div class="date-separator">
+              <span>{{ formatDateLabel(msg) }}</span>
+            </div>
+          }
+
+          <!-- System message -->
+          @if (msg.type === 'system') {
+            <div class="msg-system">{{ msg.message }}</div>
+          }
+
+          <!-- Regular message -->
+          @if (msg.type !== 'system') {
+            <div
+              class="msg-row"
+              [class.own]="isOwn(msg)"
+              [class.deleted]="msg.isDeleted"
+            >
+              <!-- Avatar (received messages only) -->
+              @if (!isOwn(msg) && chatPreview.isGroup) {
+                <app-avatar
+                  [name]="msg.senderName || '?'"
+                  [photoURL]="msg.senderPhoto || ''"
+                  [size]="28"
+                  class="msg-avatar"
+                />
+              }
+
+              <div class="msg-col">
+                <!-- Sender name (groups, received) -->
+                @if (!isOwn(msg) && chatPreview.isGroup) {
+                  <span class="msg-sender">{{ msg.senderName }}</span>
+                }
+
+                <!-- Reply preview -->
+                @if (msg.replyTo && getReplyMsg(msg.replyTo); as replied) {
+                  <div class="reply-quote">
+                    <span class="reply-quote-name">{{ replied.senderName || 'Message' }}</span>
+                    <span class="reply-quote-text">{{ replied.isDeleted ? 'Deleted message' : replied.message }}</span>
+                  </div>
+                }
+
+                <!-- Bubble -->
+                <div
+                  class="msg-bubble"
+                  [class.own]="isOwn(msg)"
+                  [class.deleted]="msg.isDeleted"
+                  (click)="$event.stopPropagation()"
+                >
+                  <!-- Editing inline -->
+                  @if (editingMessageId === msg.id) {
+                    <div class="edit-input-wrap">
+                      <textarea [(ngModel)]="editText" class="edit-input" (keydown.enter)="$event.preventDefault(); saveEdit()" rows="1"></textarea>
+                      <div class="edit-actions">
+                        <button class="edit-save" (click)="saveEdit()">Save</button>
+                        <button class="edit-cancel" (click)="cancelEdit()">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <!-- Image -->
+                    @if (msg.type === 'image' && msg.fileURL) {
+                      <img [src]="msg.fileURL" [alt]="msg.fileName || 'image'" class="msg-image" loading="lazy" />
+                    }
+
+                    <!-- File -->
+                    @if (msg.type === 'file' && msg.fileURL) {
+                      <a [href]="msg.fileURL" target="_blank" class="msg-file">
+                        <span class="file-icon">📁</span>
+                        <span class="file-name">{{ msg.fileName }}</span>
+                      </a>
+                    }
+
+                    <!-- Text -->
+                    @if (msg.type === 'text' || (!msg.type)) {
+                      <p class="msg-text" [class.deleted-text]="msg.isDeleted">
+                        @if (msg.isDeleted) {
+                          <em>🚫 This message was deleted</em>
+                        } @else {
+                          {{ msg.message }}
+                        }
+                      </p>
+                    }
+                  }
+
+                  <!-- Meta row -->
+                  @if (!msg.isDeleted) {
+                    <div class="msg-meta">
+                      @if (msg.isEdited) { <span class="edited-label">edited</span> }
+                      <span class="msg-time">{{ formatTime(msg) }}</span>
+                      @if (isOwn(msg)) {
+                        <span class="msg-status" [class.seen]="msg.status === 'seen'" [class.delivered]="msg.status === 'delivered'">
+                          @if (msg.status === 'sent') { ✓ }
+                          @if (msg.status === 'delivered') { ✓✓ }
+                          @if (msg.status === 'seen') { ✓✓ }
+                        </span>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <!-- Reactions display -->
+                @if (reactionEntries(msg.reactions).length > 0) {
+                  <div class="reactions-bar">
+                    @for (r of reactionEntries(msg.reactions); track r.emoji) {
+                      <button
+                        class="reaction-pill"
+                        [class.mine]="hasMyReaction(msg.reactions, r.emoji)"
+                        (click)="addReaction(msg.id, r.emoji)"
+                      >
+                        {{ r.emoji }} {{ r.count }}
+                      </button>
+                    }
+                  </div>
+                }
+
+                <!-- Reaction picker -->
+                @if (showReactionPicker === msg.id) {
+                  <div class="reaction-picker" [class.own]="isOwn(msg)" (click)="$event.stopPropagation()">
+                    @for (emoji of reactions; track emoji) {
+                      <button class="react-btn" (click)="addReaction(msg.id, emoji)">{{ emoji }}</button>
+                    }
+                  </div>
+                }
+
+                <!-- Hover actions -->
+                @if (!msg.isDeleted) {
+                  <div class="msg-actions" [class.own]="isOwn(msg)">
+                    <button title="Reply" (click)="setReply(msg)">↩</button>
+                    <button title="React" (click)="$event.stopPropagation(); toggleReactionPicker(msg.id)">😊</button>
+                    @if (isOwn(msg) && msg.type === 'text') {
+                      <button title="Edit" (click)="startEdit(msg)">✏️</button>
+                    }
+                    @if (isOwn(msg)) {
+                      <button title="Delete" class="danger" (click)="deleteMessage(msg.id)">🗑️</button>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        }
+
+        <!-- Typing indicator -->
+        @if (isTyping) {
+          <div class="msg-row">
+            <div class="typing-bubbles">
+              <span></span><span></span><span></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- ── AI Panel ── -->
+      @if (showAiPanel) {
+        <div class="side-panel" (click)="$event.stopPropagation()">
+          <div class="panel-header">
+            <h4>🤖 AI Assistant</h4>
+            <button class="close-panel" (click)="showAiPanel = false">✕</button>
+          </div>
+          <div class="panel-body">
+
+            @if (aiLoading) {
+              <div class="ai-loading">
+                <div class="ai-spinner"></div>
+                <span>Thinking...</span>
+              </div>
+            }
+
+            <!-- Smart Replies -->
+            @if (smartReplies.length > 0 && !aiLoading) {
+              <div class="ai-section">
+                <h5>💬 Smart Replies</h5>
+                <div class="suggestion-chips">
+                  @for (reply of smartReplies; track reply) {
+                    <button class="chip" (click)="useSuggestion(reply)">{{ reply }}</button>
+                  }
+                </div>
+              </div>
+            }
+
+            <!-- Summarize -->
+            <div class="ai-section">
+              <h5>📝 Chat Summary</h5>
+              <button class="ai-btn" (click)="summarize()" [disabled]="aiLoading">Summarize conversation</button>
+              @if (chatSummary) {
+                <p class="ai-result">{{ chatSummary }}</p>
+              }
+            </div>
+
+            <!-- Ask AI -->
+            <div class="ai-section">
+              <h5>❓ Ask about chat</h5>
+              <div class="ai-input-row">
+                <input [(ngModel)]="aiQuestion" placeholder="What did we discuss?" class="ai-input" (keydown.enter)="askAi()" />
+                <button class="ai-send-btn" (click)="askAi()" [disabled]="!aiQuestion || aiLoading">→</button>
+              </div>
+              @if (aiAnswer) {
+                <p class="ai-result">{{ aiAnswer }}</p>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ── Group Info Panel ── -->
+      @if (showGroupInfo && chatPreview.isGroup) {
+        <div class="side-panel" (click)="$event.stopPropagation()">
+          <div class="panel-header">
+            <h4>👥 Group Info</h4>
+            <button class="close-panel" (click)="showGroupInfo = false">✕</button>
+          </div>
+          <div class="panel-body">
+            <div class="group-cover">
+              <app-avatar [name]="chatPreview.name" [photoURL]="chatPreview.photoURL" [size]="72" />
+              <h3>{{ chatPreview.name }}</h3>
+              <span class="member-count-label">{{ chatPreview.memberCount || 0 }} members</span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- ── Message Input ── -->
+    <app-message-input
+      [chatId]="chatPreview.chatId"
+      [isGroup]="chatPreview.isGroup"
+      [replyMessage]="replyMessage"
+      [prefillText]="prefillText"
+      (messageSent)="onMessageSent()"
+      (cancelReply)="clearReply()"
+    />
+  }
+</div>

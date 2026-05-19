@@ -1,0 +1,193 @@
+:host { display: block; height: 100vh; background: var(--bg-chat); overflow-y: auto; }
+
+.profile-page {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  background: linear-gradient(180deg, var(--primary-600) 0%, var(--primary-600) 140px, var(--bg-chat) 140px);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 480px;
+  padding: 16px 20px;
+  color: white;
+
+  h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+}
+
+.back-btn, .theme-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  padding: 7px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background 0.15s;
+
+  &:hover { background: rgba(255, 255, 255, 0.3); }
+}
+
+.profile-card {
+  background: var(--bg-primary);
+  border-radius: 24px 24px 0 0;
+  width: 100%;
+  max-width: 480px;
+  padding: 24px 24px 40px;
+  flex: 1;
+  box-shadow: var(--shadow-lg);
+}
+
+.avatar-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+  margin-top: -44px;
+}
+
+.avatar-upload-label {
+  position: relative;
+  cursor: pointer;
+  display: block;
+
+  .avatar-overlay {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 28px;
+    height: 28px;
+    background: var(--primary-500);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    border: 2px solid var(--bg-primary);
+    box-shadow: var(--shadow);
+  }
+}
+
+.avatar-hint { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.form-input {
+  padding: 11px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+
+  &:focus { outline: none; border-color: var(--primary-500); }
+  &.error { border-color: #ef4444; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+  &::placeholder { color: var(--text-muted); }
+}
+
+.form-error { font-size: 0.78rem; color: #ef4444; }
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+
+  &-full { width: 100%; }
+
+  &-primary {
+    background: linear-gradient(135deg, var(--primary-500), var(--primary-700));
+    color: white;
+    margin-top: 4px;
+
+    &:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(var(--primary-rgb), 0.4); }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+  }
+}
+
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  margin-bottom: 8px;
+
+  &-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  &-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+}
+
+.account-section {
+  margin-top: 28px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 20px;
+
+  h4 { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin: 0 0 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+}
+
+.danger-btn {
+  width: 100%;
+  padding: 12px;
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1.5px solid #fecaca;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+
+  &:hover { background: #fee2e2; }
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }

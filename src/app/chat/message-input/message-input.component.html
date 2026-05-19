@@ -1,0 +1,81 @@
+<div class="message-input-container">
+  <!-- Reply Preview -->
+  @if (replyMessage) {
+    <div class="reply-preview">
+      <div class="reply-bar"></div>
+      <div class="reply-content">
+        <span class="reply-sender">Replying to {{ replyMessage.senderName }}</span>
+        <span class="reply-text">{{ replyMessage.message }}</span>
+      </div>
+      <button class="reply-close" (click)="cancelReply.emit()">✕</button>
+    </div>
+  }
+
+  <!-- File Preview -->
+  @if (previewFile) {
+    <div class="file-preview">
+      @if (previewFile.type.startsWith('image/')) {
+        <img [src]="previewFile.url" alt="preview" class="img-preview" />
+      } @else {
+        <div class="file-icon">📁</div>
+      }
+      <div class="file-info">
+        <span class="file-name">{{ previewFile.name }}</span>
+      </div>
+      <button class="file-remove" (click)="clearPreview()">✕</button>
+    </div>
+  }
+
+  <!-- Emoji Picker -->
+  @if (showEmojiPicker) {
+    <div class="emoji-picker">
+      @for (emoji of emojis; track emoji) {
+        <button class="emoji-btn" (click)="insertEmoji(emoji)">{{ emoji }}</button>
+      }
+    </div>
+  }
+
+  <!-- Send Error -->
+  @if (sendError) {
+    <div class="send-error">⚠️ {{ sendError }}</div>
+  }
+
+  <!-- Main Input Row -->
+  <div class="input-row">
+    <button class="tool-btn" (click)="showEmojiPicker = !showEmojiPicker" [class.active]="showEmojiPicker" title="Emoji">
+      😊
+    </button>
+
+    <button class="tool-btn" (click)="fileInput.click()" title="Attach file">
+      📎
+    </button>
+
+    <textarea
+      #messageTextarea
+      [(ngModel)]="messageText"
+      (keydown)="onKeydown($event)"
+      (input)="onInput()"
+      placeholder="Type a message..."
+      class="message-textarea"
+      rows="1"
+    ></textarea>
+
+    <button
+      class="send-btn"
+      [class.ready]="messageText.trim() || previewFile"
+      [disabled]="(!messageText.trim() && !previewFile) || sending"
+      (click)="sendMessage()"
+      title="Send (Enter)"
+    >
+      @if (sending) {
+        <span class="sending-spinner"></span>
+      } @else {
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+        </svg>
+      }
+    </button>
+  </div>
+
+  <input #fileInput type="file" accept="image/*,video/*,.pdf,.doc,.docx,.txt,.zip" hidden (change)="onFileSelected($event)" />
+</div>
